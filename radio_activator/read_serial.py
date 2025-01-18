@@ -1,4 +1,6 @@
 import os
+import subprocess
+import threading
 
 import serial
 from dotenv import load_dotenv
@@ -38,7 +40,16 @@ def get_station_url(station_number: int, stations: dict[int, str]) -> str:
     return station_url
 
 
+def play_radio(station_url: str, stop_playing: threading.Event):
+    process = subprocess.Popen(["mpv", station_url])
+    stop_playing.wait()
+    process.terminate()
+
+
 def main():
+    radio_thread: threading.Thread | None = None
+    stop_playing_event = threading.Event()
+
     with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
         print("Waiting for serial data...")
         while True:
@@ -48,9 +59,19 @@ def main():
                 print(f"Received: {dialed_number}")
                 try:
                     station_url = get_station_url(dialed_number, STATIONS)
-                    print(f"Playing: {station_url}")
                 except NoStationConfigured:
                     print(f"No station configured for {dialed_number}.")
+
+                if radio_thread and radio_thread.is_alive():
+                    stop_playing_event.set()
+                    radio_thread.join()  # Wait for the thread to finish
+                    stop_playing_event.clear()
+
+                radio_thread = threading.Thread(
+                    target=play_radio, args=(station_url, stop_playing_event)
+                )
+                radio_thread.start()
+                print(f"Playing: {station_url}")
 
 
 if __name__ == "__main__":
