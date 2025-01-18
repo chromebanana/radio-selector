@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 import threading
@@ -7,16 +8,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-STATIONS = {
-    1: "https://stream-relay-geo.ntslive.net/stream",
-    2: "https://stream-relay-geo.ntslive.net/stream2",
-    3: "https://as-hls-ww-live.akamaized.net/pool_904/live/ww/bbc_radio_three/bbc_radio_three.isml/bbc_radio_three-audio%3d96000.norewind.m3u8",
-    4: "https://as-hls-ww-live.akamaized.net/pool_904/live/ww/bbc_radio_fourfm/bbc_radio_fourfm.isml/bbc_radio_fourfm-audio%3d96000.norewind.m3u8",
-}
-
-
 BAUD_RATE = 9600
 SERIAL_PORT = os.getenv("SERIAL_PORT")
+
+
+def get_stations() -> dict[int, str]:
+    with open(os.path.join(os.getenv("RADIO_STATIONS_PATH")), "r") as f:
+        stations = {int(k): v for k, v in json.load(f).items()}
+    return stations
 
 
 def parse_input(serial_data: bytes) -> int:
@@ -66,10 +65,12 @@ def main():
                         print("Stopped playing.")
                     continue
 
+                stations = get_stations()
                 try:
-                    station_url = get_station_url(dialed_number, STATIONS)
+                    station_url = get_station_url(dialed_number, stations)
                 except NoStationConfigured:
                     print(f"No station configured for {dialed_number}.")
+                    continue
 
                 if radio_thread and radio_thread.is_alive():
                     stop_playing_event.set()
