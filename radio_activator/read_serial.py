@@ -57,6 +57,15 @@ def main():
             if line:
                 dialed_number = parse_input(line)
                 print(f"Received: {dialed_number}")
+
+                if dialed_number == 0:
+                    if radio_thread and radio_thread.is_alive():
+                        stop_playing_event.set()
+                        radio_thread.join()
+                        stop_playing_event.clear()
+                        print("Stopped playing.")
+                    continue
+
                 try:
                     station_url = get_station_url(dialed_number, STATIONS)
                 except NoStationConfigured:
