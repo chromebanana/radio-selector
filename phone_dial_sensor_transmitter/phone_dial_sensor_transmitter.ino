@@ -22,7 +22,6 @@ void loop() {
     if (dialingInProgress) {
         countPulses();
         if (digitalRead(dialMotionPin) == HIGH) {
-            Serial.print("Dialed number: ");
             Serial.println(pulseCount);
             delay(preSleepDelay); // ensure serial.print has time to finish before sleep...
             
